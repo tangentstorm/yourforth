@@ -10,10 +10,6 @@
 \ This is the ISO compatibility layer, to be phased out
 
 HEX
-: FOR  ">R BEGIN R@ WHILE" EVALUATE ; IMMEDIATE
-: NEXT "R> 1 - >R REPEAT R> DROP" EVALUATE ; IMMEDIATE
-
-: RECURSE LATEST , ; IMMEDIATE
 
 "RDROP" (CREATE)
  8D C, 6D C, 04  C,     \  LEA     EBP,[EBP+(CW*(1))]
@@ -21,43 +17,13 @@ HEX
  FF C, 20 C,            \  JMP      LONG[EAX]
 
 : LEAVE         RDROP RDROP RDROP ;
-: UNLOOP        'RDROP , 'RDROP , 'RDROP , ;  IMMEDIATE
-
-: ROT SDSWAP ;
 
 \ FIXME! This definition is terribly wrong, but it helps out.
-: D+ ROT + >R + R> ;
-
-: ?DUP   DUP IF DUP THEN ;
+: D+ SDSWAP + >R + R> ;
 
 : (     PP@@ 2DROP &) PARSE 2DROP ; IMMEDIATE
 
-:  ."   PP@@ 2DROP POSTPONE " STATE @ IF 'TYPE , ELSE TYPE THEN ; IMMEDIATE
-
-"UM/MOD" (CREATE)
-5B C, \          :H_UM/MOD    POP|X, BX|
-5A C, \                         POP|X, DX|
-58 C, \                         POP|X, AX|
-F7 C, F3 C, \               DIV|AD, X| R| BX|
-52 C, \                         PUSH|X, DX|
-50 C, \                         PUSH|X, AX|
-AD C, \                    LODS, X'|
-FF C, 20 C, \                    JMPO, ZO| [AX]
-ALIGN
-
-"UM*" (CREATE)
-58 C, \               :H_UM*    POP|X, AX|
-5B C, \                         POP|X, BX|
-F7 C, E3 C, \               MUL|AD, X| R| BX|
-92 C, \                    XCHG|AX, DX|
-52 C, \                         PUSH|X, DX|
-50 C, \                         PUSH|X, AX|
-AD C, \                    LODS, X'|
-FF C, 20 C, \                    JMPO, ZO| [AX]
-ALIGN
-
 DECIMAL
-: $!-BD 2DUP C! 1+ SWAP MOVE ;
 \ Reasonable additions.
 : TRUE -1 ;
 : SOURCE SRC 2@ SWAP OVER - ;
@@ -66,41 +32,21 @@ DECIMAL
 
 \ Words actually used in the Hayes test.
 
-\ '' HIDDEN
-\ : '  NAME PRESENT DUP 0= 11 ?ERROR ;
-\ : [']  ' POSTPONE LITERAL ; IMMEDIATE
-
 : >NUMBER
     2DUP + >R 0 2DUP - IF
     DO
         DUP C@ DIGIT IF DROP LEAVE THEN
-        SWAP >R SWAP BASE @ UM* DROP ROT BASE @ UM* D+ R> 1+
+        SWAP >R SWAP BASE @ M* DROP SDSWAP BASE @ M* D+ R> 1+
     LOOP
     ELSE
         2DROP
     THEN
     R> OVER - ;
 
-: SPACES  BEGIN DUP 0 > WHILE BL EMIT 1 - REPEAT DROP ;
-
-: M/MOD >R 0 R@ UM/MOD R> SWAP >R UM/MOD R> ;
-
-: FM/MOD
-    DUP >R 2DUP XOR >R SM/REM R> 0< 0BRANCH [ 44 , ]
-        OVER IF 1 - SWAP R> + SWAP
-    ELSE RDROP THEN
-;
-
 : 1- 1 - ;
-\ : 2/ DUP 0< 2 FM/MOD NIP ;
 : 2/ DUP 0< 31 RSHIFT 31 LSHIFT  SWAP 1 RSHIFT OR ;
-: 2* 2 * ;
 
 : S>D   DUP 0< ;
-: <# PAD HLD ! ;
-: #> DROP DROP HLD @ PAD OVER - ;
-: # BASE @ M/MOD ROT 9 OVER < IF 7 + THEN 48 + HOLD ;
-: #S   BEGIN #   2DUP OR   0=  UNTIL ;
 
 \ ==================================================================
 
@@ -119,8 +65,7 @@ VARIABLE VERBOSE
    TRUE VERBOSE !
 \    FALSE VERBOSE !
 
-: EMPTY-STACK   \ ( ... -- ) EMPTY STACK.
-   DEPTH ?DUP IF 0 DO DROP LOOP THEN ;
+: EMPTY-STACK   CLS  ;    \ ( ... -- ) EMPTY STACK.
 
 ' ERROR HIDDEN
 
@@ -140,19 +85,19 @@ CREATE ACTUAL-RESULTS 20 CELLS ALLOT
 
 : ->            \ ( ... -- ) RECORD DEPTH AND CONTENT OF STACK.
    DEPTH DUP ACTUAL-DEPTH !             \ RECORD DEPTH
-   ?DUP IF                              \ IF THERE IS SOMETHING ON STACK
+   DUP IF                              \ IF THERE IS SOMETHING ON STACK
       0 DO ACTUAL-RESULTS I CELLS + ! LOOP \ SAVE THEM
-   THEN ;
+   ELSE DROP THEN ;
 
 : }             \ ( ... -- ) COMPARE STACK (EXPECTED) CONTENTS WITH SAVED
                 \ (ACTUAL) CONTENTS.
    DEPTH ACTUAL-DEPTH @ = IF            \ IF DEPTHS MATCH
-      DEPTH ?DUP IF                     \ IF THERE IS SOMETHING ON THE STACK
+      DEPTH DUP IF                 \ IF THERE IS SOMETHING ON THE STACK
          0 DO                           \ FOR EACH STACK ITEM
             ACTUAL-RESULTS I CELLS + @  \ COMPARE ACTUAL WITH EXPECTED
             <> IF "INCORRECT RESULT: " ERROR LEAVE THEN
          LOOP
-      THEN
+      ELSE DROP THEN
    ELSE                                 \ DEPTH MISMATCH
       "WRONG NUMBER OF RESULTS: " ERROR
    THEN ;
@@ -333,15 +278,12 @@ TESTING COMPARISONS: 0= = 0< < > MIN MAX
 { MAX-INT 0 MAX -> MAX-INT }
 
 \ ------------------------------------------------------------------------
-TESTING STACK OPS: 2DROP 2DUP 2OVER 2SWAP ?DUP DEPTH DROP DUP OVER ROT SWAP
+TESTING STACK OPS: 2DROP 2DUP 2OVER 2SWAP DEPTH DROP DUP OVER SDSWAP SWAP
 
 { 1 2 2DROP -> }
 { 1 2 2DUP -> 1 2 1 2 }
 { 1 2 3 4 2OVER -> 1 2 3 4 1 2 }
 { 1 2 3 4 2SWAP -> 3 4 1 2 }
-{ 0 ?DUP -> 0 }
-{ 1 ?DUP -> 1 1 }
-{ -1 ?DUP -> -1 -1 }
 { DEPTH -> 0 }
 { 0 DEPTH -> 0 1 }
 { 0 1 DEPTH -> 0 1 2 }
@@ -349,7 +291,7 @@ TESTING STACK OPS: 2DROP 2DUP 2OVER 2SWAP ?DUP DEPTH DROP DUP OVER ROT SWAP
 { 1 2 DROP -> 1 }
 { 1 DUP -> 1 1 }
 { 1 2 OVER -> 1 2 1 }
-{ 1 2 3 ROT -> 2 3 1 }
+{ 1 2 3 SDSWAP -> 2 3 1 }
 { 1 2 SWAP -> 2 1 }
 
 \ ------------------------------------------------------------------------
@@ -402,7 +344,8 @@ TESTING ADD/SUBTRACT: + - 1+ ABS NEGATE
 { MIN-INT ABS -> MID-UINT+1 }
 
 \ ------------------------------------------------------------------------
-TESTING MULTIPLY: S>D * M* UM*
+TESTING MULTIPLY: S>D * M*
+
 
 { 0 S>D -> 0 0 }
 { 1 S>D -> 1 0 }
@@ -445,56 +388,8 @@ TESTING MULTIPLY: S>D * M* UM*
 { MID-UINT+1 2 RSHIFT 4 * -> MID-UINT+1 }
 { MID-UINT+1 1 RSHIFT MID-UINT+1 OR 2 * -> MID-UINT+1 }
 
-{ 0 0 UM* -> 0 0 }
-{ 0 1 UM* -> 0 0 }
-{ 1 0 UM* -> 0 0 }
-{ 1 2 UM* -> 2 0 }
-{ 2 1 UM* -> 2 0 }
-{ 3 3 UM* -> 9 0 }
-
-{ MID-UINT+1 1 RSHIFT 2 UM* -> MID-UINT+1 0 }
-{ MID-UINT+1 2 UM* -> 0 1 }
-{ MID-UINT+1 4 UM* -> 0 2 }
-{ 1S 2 UM* -> 1S 1 LSHIFT 1 }
-{ MAX-UINT MAX-UINT UM* -> 1 1 INVERT }
-
 \ ------------------------------------------------------------------------
-TESTING DIVIDE: FM/MOD SM/REM UM/MOD */ */MOD / /MOD MOD
-
-{ 0 S>D 1 FM/MOD -> 0 0 }
-{ 1 S>D 1 FM/MOD -> 0 1 }
-{ 2 S>D 1 FM/MOD -> 0 2 }
-{ -1 S>D 1 FM/MOD -> 0 -1 }
-{ -2 S>D 1 FM/MOD -> 0 -2 }
-{ 0 S>D -1 FM/MOD -> 0 0 }
-{ 1 S>D -1 FM/MOD -> 0 -1 }
-{ 2 S>D -1 FM/MOD -> 0 -2 }
-{ -1 S>D -1 FM/MOD -> 0 1 }
-{ -2 S>D -1 FM/MOD -> 0 2 }
-{ 2 S>D 2 FM/MOD -> 0 1 }
-{ -1 S>D -1 FM/MOD -> 0 1 }
-{ -2 S>D -2 FM/MOD -> 0 1 }
-{  7 S>D  3 FM/MOD -> 1 2 }
-{  7 S>D -3 FM/MOD -> -2 -3 }
-{ -7 S>D  3 FM/MOD -> 2 -3 }
-{ -7 S>D -3 FM/MOD -> -1 2 }
-{ MAX-INT S>D 1 FM/MOD -> 0 MAX-INT }
-{ MIN-INT S>D 1 FM/MOD -> 0 MIN-INT }
-{ MAX-INT S>D MAX-INT FM/MOD -> 0 1 }
-{ MIN-INT S>D MIN-INT FM/MOD -> 0 1 }
-{ 1S 1 4 FM/MOD -> 3 MAX-INT }
-{ 1 MIN-INT M* 1 FM/MOD -> 0 MIN-INT }
-{ 1 MIN-INT M* MIN-INT FM/MOD -> 0 1 }
-{ 2 MIN-INT M* 2 FM/MOD -> 0 MIN-INT }
-{ 2 MIN-INT M* MIN-INT FM/MOD -> 0 2 }
-{ 1 MAX-INT M* 1 FM/MOD -> 0 MAX-INT }
-{ 1 MAX-INT M* MAX-INT FM/MOD -> 0 1 }
-{ 2 MAX-INT M* 2 FM/MOD -> 0 MAX-INT }
-{ 2 MAX-INT M* MAX-INT FM/MOD -> 0 2 }
-{ MIN-INT MIN-INT M* MIN-INT FM/MOD -> 0 MIN-INT }
-{ MIN-INT MAX-INT M* MIN-INT FM/MOD -> 0 MAX-INT }
-{ MIN-INT MAX-INT M* MAX-INT FM/MOD -> 0 MIN-INT }
-{ MAX-INT MAX-INT M* MAX-INT FM/MOD -> 0 MAX-INT }
+TESTING DIVIDE: SM/REM */ */MOD / /MOD MOD
 
 { 0 S>D 1 SM/REM -> 0 0 }
 { 1 S>D 1 SM/REM -> 0 1 }
@@ -527,26 +422,11 @@ TESTING DIVIDE: FM/MOD SM/REM UM/MOD */ */MOD / /MOD MOD
 { MIN-INT MAX-INT M* MAX-INT SM/REM -> 0 MIN-INT }
 { MAX-INT MAX-INT M* MAX-INT SM/REM -> 0 MAX-INT }
 
-{ 0 0 1 UM/MOD -> 0 0 }
-{ 1 0 1 UM/MOD -> 0 1 }
-{ 1 0 2 UM/MOD -> 1 0 }
-{ 3 0 2 UM/MOD -> 1 1 }
-{ MAX-UINT 2 UM* 2 UM/MOD -> 0 MAX-UINT }
-{ MAX-UINT 2 UM* MAX-UINT UM/MOD -> 0 2 }
-{ MAX-UINT MAX-UINT UM* MAX-UINT UM/MOD -> 0 MAX-UINT }
-
-: IFFLOORED
-   [ -3 2 / -2 = INVERT ] LITERAL IF POSTPONE \ THEN ;
 : IFSYM
    [ -3 2 / -1 = INVERT ] LITERAL IF POSTPONE \ THEN ;
 
 \ THE SYSTEM MIGHT DO EITHER FLOORED OR SYMMETRIC DIVISION.
-\ SINCE WE HAVE ALREADY TESTED M*, FM/MOD, AND SM/REM WE CAN USE THEM IN TEST.
-IFFLOORED : T/MOD  >R S>D R> FM/MOD ;
-IFFLOORED : T/     T/MOD SWAP DROP ;
-IFFLOORED : TMOD   T/MOD DROP ;
-IFFLOORED : T*/MOD >R M* R> FM/MOD ;
-IFFLOORED : T*/    T*/MOD SWAP DROP ;
+\ SINCE WE HAVE ALREADY TESTED M*, AND SM/REM WE CAN USE THEM IN TEST.
 IFSYM     : T/MOD  >R S>D R> SM/REM ;
 IFSYM     : T/     T/MOD SWAP DROP ;
 IFSYM     : TMOD   T/MOD DROP ;
@@ -747,7 +627,7 @@ CREATE GT2A -1 C,
 { GT2ASTRING FOUND >NFA @ @ -> 0 }
 { : GT3 GT2 LITERAL ; -> }
 { GT3 -> 'GT1 }
-{ GT1STRING SWAP DROP -> 3 }
+{ GT1STRING DROP DUP COUNT >R SWAP - R> -> 1 &G }
 
 { : GT4 POSTPONE GT1 ; IMMEDIATE -> }
 { : GT5 GT4 ; -> }
@@ -793,6 +673,8 @@ TESTING IF ELSE THEN BEGIN WHILE REPEAT UNTIL
 
 \ ------------------------------------------------------------------------
 TESTING DO LOOP +LOOP I J UNLOOP LEAVE EXIT
+
+: UNLOOP        'RDROP , 'RDROP , 'RDROP , ;  IMMEDIATE
 
 { : GD1 DO I LOOP ; -> }
 { 4 1 GD1 -> 1 2 3 }
@@ -910,16 +792,10 @@ VARIABLE SCANS
 TESTING <% % %S %> HOLD SIGN BASE >NUMBER HEX DECIMAL
 
 : S=  \ ( ADDR1 C1 ADDR2 C2 -- T/F ) COMPARE TWO STRINGS.
-   >R SWAP R@ = IF                      \ MAKE SURE STRINGS HAVE SAME LENGTH
-      R> ?DUP IF                        \ IF NON-EMPTY STRINGS
-         0 DO
-            OVER C@ OVER C@ - IF 2DROP <FALSE> UNLOOP EXIT THEN
-            SWAP 1+ SWAP 1+
-         LOOP
-      THEN
-      2DROP <TRUE>                      \ IF WE GET HERE, STRINGS MATCH
+   SDSWAP OVER <> IF                    \ COMPARE LENGTHS
+      DROP 2DROP <FALSE>             \ LENGTHS MISMATCH
    ELSE
-      R> DROP 2DROP <FALSE>             \ LENGTHS MISMATCH
+      CORA 0=                        \ IF NON-EMPTY STRINGS
    THEN ;
 
 : GP1 <% 41 HOLD 42 HOLD 0 %> "BA" S= ;
@@ -936,7 +812,7 @@ TESTING <% % %S %> HOLD SIGN BASE >NUMBER HEX DECIMAL
 
 24 CONSTANT MAX-BASE                    \ BASE 2 .. 36
 : COUNT-BITS
-   0 0 INVERT BEGIN DUP WHILE >R 1+ R> 2* REPEAT DROP ;
+   0 0 INVERT BEGIN DUP WHILE >R 1+ R> 1 LSHIFT REPEAT DROP ;
 COUNT-BITS CONSTANT #BITS-U         \ NUMBER OF BITS IN UD
 
 : GP5
@@ -1050,22 +926,18 @@ CREATE SBUF 12 C, 34 C, 56 C,
 { SEEBUF -> 12 34 34 }
 
 \ ------------------------------------------------------------------------
-TESTING OUTPUT: . ." CR EMIT SPACE SPACES TYPE U.
+TESTING OUTPUT: . " CR EMIT SPACE TYPE
 
 : OUTPUT-TEST
-   ." YOU SHOULD SEE 0-9 SEPARATED BY A SPACE:" CR
+   "YOU SHOULD SEE 0-9 SEPARATED BY A SPACE:" TYPE CR
    9 1+ 0 DO I . LOOP CR
-   ." YOU SHOULD SEE 0-9 (WITH NO SPACES):" CR
-   &9 1+ &0 DO I 0 SPACES EMIT LOOP CR
-   ." YOU SHOULD SEE A-G SEPARATED BY A SPACE:" CR
+   "YOU SHOULD SEE A-G SEPARATED BY A SPACE:" TYPE CR
    &G 1+ &A DO I EMIT SPACE LOOP CR
-   ." YOU SHOULD SEE 0-5 SEPARATED BY TWO SPACES:" CR
-   5 1+ 0 DO I &0 + EMIT 2 SPACES LOOP CR
-   ." YOU SHOULD SEE TWO SEPARATE LINES:" CR
+   "YOU SHOULD SEE TWO SEPARATE LINES:" TYPE CR
    "LINE 1" TYPE CR "LINE 2" TYPE CR
-   ." YOU SHOULD SEE THE NUMBER RANGES OF SIGNED AND UNSIGNED NUMBERS:" CR
-   ."   SIGNED: " MIN-INT . MAX-INT . CR
-   ." UNSIGNED: " 0 U. MAX-UINT U. CR
+   "YOU SHOULD SEE THE NUMBER RANGES OF SIGNED AND UNSIGNED NUMBERS:" TYPE CR
+   "  SIGNED: " TYPE MIN-INT . MAX-INT . CR
+   "UNSIGNED: " TYPE 0 U. MAX-UINT U. CR
 ;
 
 { OUTPUT-TEST -> }
@@ -1076,14 +948,14 @@ TESTING INPUT: ACCEPT
 CREATE ABUF 80 ALLOT
 
 : ACCEPT-TEST
-   CR ." PLEASE TYPE UP TO 80 CHARACTERS:" CR
+   CR "PLEASE TYPE UP TO 80 CHARACTERS:" TYPE CR
    ABUF 80 ACCEPT
-   CR ." RECEIVED: " &" EMIT
+   CR "RECEIVED: " TYPE &" EMIT
    ABUF SWAP TYPE &" EMIT CR
 ;
 
-." YOU SHOULD SEE THE FOLLOWING LINE ANOTHER TIME AFTER RECEIVED:" CR
-." THIS IS AN INPUT LINE FOLLOWING IN THE SOURCE" CR
+"YOU SHOULD SEE THE FOLLOWING LINE ANOTHER TIME AFTER RECEIVED:" TYPE CR
+"THIS IS AN INPUT LINE FOLLOWING IN THE SOURCE" TYPE CR
 { ACCEPT-TEST -> }
 THIS IS AN INPUT LINE FOLLOWING IN THE SOURCE
 \ ------------------------------------------------------------------------

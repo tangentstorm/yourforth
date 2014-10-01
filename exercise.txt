@@ -1,12 +1,17 @@
 Exercises for yourforth.
-
 We follow the convention of Knuth in TAO:
     Exercises are numbered per section.
     Each exercise has a rating 0..50, where 40 is research project and
-    10 is an easy question just doable without pen and paper.
+    under 10 an easy question that you can asnwer inyour head.
+    At first, just skip the hard exercises.
 
+\ -------------------- 0 Introduction --------------------------
+0.0 If you're new at Forth you must read the Chapter "gentle introduction"
+of yourforth.pdf.
+Was it painful?
+Answer:
 
-Use as a calculator
+0.1 Use as a calculator.
 Go to a system with a decent keyboard and numeric keypad and
 switch it to numeric. Now type the following into <your>forth,
 ending each line with the <ENTER> key from the keypad.
@@ -29,24 +34,81 @@ Now repeat the experiment, with the normal keyboard typing
 What are the first and second results?
 Answer:
 
-
-Run the test through yourforth as follows:
+0.2 Regression test.
+There is a test supplied called tsuiteyour.frt.
+Run it through yourforth as follows:
 yourforth <tsuiteyour.frt | more
-We want to see how this test signals defects.
+This is a regression test, familiarize yourself with the output.
+We must know how this test signals defects.
 Remove the word MIN from yourforth, i.e. its header line and
 lines following up till MAX.
 Try to run the test again. Why doesn't this work?
 Answer:
-Now rename the word MIN to APE.
+Now keep the word, but change its Forth name MIN to APE.
 What number has the error revealed by tsuiteyour.frt?
 Answer:
 Look the error up in yourforth.pdf.
 What is the name of the chapter it is in?
 Answer:
 What are the three words where this error is detected?
-Answer:
 Hint: all errors are signalled by ?ERROR. Use the source!
+Answer:
+In yourforth.fas remove the content of COUNT , except for the closing EXIT
+and run the test again. What error message do you get?
+Answer:
 
+\ ---------------------- 1 memory and adressing ---------------------------------
+1.1 Memory size.
+Type WORDS to verify that BM and EM are indeed Forth words.
+How many items are left by BM? Hint use .S .
+Answer:
+What do you expect as a result of `` EM BM - . ''? Now try it.
+Answer:
+
+1.2 Usable size.
+Find the place where forthsize is defined:
+forthsize equ 0x100000         ; 1 Mbyte
+Reassemble with 2 Mbyte and check that the resulting Forth
+works the same. Hint: use the regression test.
+How are you going to verify the size change from within <your>forth?
+Answer:
+
+1.3 Insight in memory layout.
+Which RB (reserve byte) statement is responsible for allocating the bulk of the
+working space for <your>forth?
+Answer:
+There are only four labels in the high uninitialized part of the memory.
+Name them.
+Answer:
+
+(30) 1.4. memory layout and Forth.
+Where are they used? What is the type/class of those words?
+Answer:
+
+\ ---------------------- 2 input and output ------------
+
+2.1 Just a bunch of characters.
+Define a word as with
+CREATE x[32myourforth
+Show that it is in the list using WORDS.
+Now do
+LATEST >NFA @ $@
+This leaves the name of that definition as you can see with
+2DUP TYPE
+Now do
+DROP HEX 1B SWAP C!
+This changes the first letter (x) into an escape.
+What do you see after the following?
+LATEST >NFA @ $@ TYPE
+Answer:
+
+2.2 Interfacing with Linux
+Just do
+1 XOS
+What happens?
+Answer:
+
+------------------------
 Define a word as per
 "APE" (CREATE)
 and verify that is is in the dictionary list.
@@ -67,7 +129,6 @@ Answer:
 'APE >NFA @ $@ TYPE
 You've earned your badge, from now on you may do
 'APE ID.
-
 
 Try out the following (don't worry if you don't quite understand it)
 : APE "Kiss my ape" TYPE CR ;
@@ -113,7 +174,7 @@ Answer:
 What is contained in APE 's datafield. State the code to inspect it.
 
 "NOTE" (CREATE)
-What is contained in APE 's datafield.
+What is contained in NOTE's datafield.
 Answer:
 "APE" (CREATE)
 1789172  'APE >CFA !
@@ -125,11 +186,6 @@ NOTE
 Put some values on the stack and try to find out what NOTE does.
 What happens if you type APE? What does NOTE?
 Answer:
-
-
-
-
-
 
 define 3 words A B C as per
 "A" (CREATE)
@@ -143,14 +199,6 @@ Answer:
 Now do it and check with WORDS. State how!
 Answer:
 
-Which rb statement is responsible for allocating the bulk of the
-working space for <your>forth?
-Answer:
-There are only four labels in the high uninitialized part of the memory.
-Name them.
-Answer:
-Where are they used? What is the type/class of those words?
-Answer:
 Now *on a virgin system* put 1000,000 on the stack and type
     INCLUDE examples/grow.frt
 You have a new file in your directory, now run it.
@@ -216,12 +264,6 @@ Get rid of the assembler words in the dictionary list while
 keeping NOOP2. State how!
 Answer:
 
-Find the place where forthsize is defined:
-forthsize equ 0x100000         ; 1 Mbyte
-Reassemble with 2 Mbyte and check that the resulting Forth
-works the same.
-How are you going to verify the size change from within <your>forth?
-Answer:
 
 Do
    objdump -x yourforth
@@ -321,6 +363,17 @@ Would it have been worthwhile?
 Answer:
     2. That change would've been about equal to this assignment.
     (All reasoning accepted.)
+
+
+Make a file with a simple test like:
+    "hello there" TYPE CR
+    "yes! what?" TYPE CR
+Now pass it to yourforth using the redirection mechanism.
+Now remove the test for end of pipe in QUIT and repeat the test.
+What do you see?
+Answer:
+What modification to the test file can solve this?
+Answer:
 
 
 Some Linux commands take 5 parameters instead of 3.
