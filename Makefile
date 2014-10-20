@@ -4,7 +4,7 @@ run: yourforth
 	./yourforth
 
 clean:
-	rm ./yourforth
+	rm -f ./yourforth
 
 yourforth: yourforth.fas
 	sed -e's/^/;PAGE/g' yourforth.fas > build.fas
