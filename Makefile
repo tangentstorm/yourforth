@@ -1,7 +1,7 @@
 default: clean yourforth
 
 run: yourforth
-	./yourforth
+	rlwrap ./yourforth
 
 clean:
 	rm -f ./yourforth
