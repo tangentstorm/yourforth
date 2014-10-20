@@ -4,20 +4,26 @@
 ; This is a community effort in the spirit of the Forth Interest Group.
 ; It is public domain and only knows contributors, no copyright holders.
 ; Contributors:  <when contributing, put your name here>
+;
 ;   yourforth $Revision: 6.28 $
-
+;
 ; To build:
-; wget http://flatassembler.net/fasm-1.70.03.tgz; tar xfz fasm-1.70.03.tgz; fasm/fasm yourforth.fas
-; That is right. Not only did you brew coffee, you've been to Columbia, picked the beans,
-; and roasted them as well! Next time you only need "fasm/fasm ourforth.fas".
-; If you're new at Forth you may want to read the Chapter "gentle introduction"
-; of yourforth.pdf.
+;
+;     wget http://flatassembler.net/fasm-1.70.03.tgz
+;     tar xfz fasm-1.70.03.tgz
+;     fasm/fasm yourforth.fas
+;
+; That is right. Not only did you brew coffee, you've been to
+; Columbia, picked the beans, and roasted them as well! Next time you
+; only need "fasm/fasm ourforth.fas".  If you're new at Forth you may
+; want to read the Chapter "gentle introduction" of yourforth.pdf.
 
-; ---------------- preliminary remark -------------------------
-; Normally a Forth in assembly style would use the official assembler
-; on the operating system at hand, in our case gas or ``GNU as'' as it is called
-; nowadays.
-; The one-liner illustrates why we deviate here. A gas equivalent would download 1 Gbyte!
+; ---------------- preliminary remark ------------------------------------------
+; Normally, a Forth in assembly style would use the official assembler
+; on the operating system at hand, in our case gas or ``GNU as'' as it
+; is called nowadays.  The one-liner illustrates why we deviate
+; here. A gas equivalent would download 1 Gbyte!
+;
 ; I use fasm because it has overwhelming advantages.
 ; By implication the following advantages point to disadvantages of gas.
 ; 1. fasm accommodates one simple segment
@@ -25,58 +31,62 @@
 ; 3. fasm has a traditional macro facility
 ; 4. fasm needs no linking step
 ; 5. fasm is small, basically an executable.
-; Also it accommodates symbol reassignment and labels that are local to macro's,
-; which is kind of essential to the way we want to use macro's.
+;
+; Also it accommodates symbol reassignment and labels that are local to macros,
+; which is kind of essential to the way we want to use macros.
 
-; ------------------ 0. introduction ------------------------------------
-; A famous chess player once stated that, if we were to find aliens living on
-; another planet, we should expect that they will play Go. Likewise
-; discovering Forth is something every civilisation in the universe will
-; do eventually. Chuck Moore claims to have discovered, rather than invented, Forth.
-; You'll find the structure of yourforth simple, and compelling.
-
-; The model for Forth is the stored program computer, actually the best invention since
-; sliced bread. The first computers had a work area where numbers were stored, and
-; punched card that represented the instructions. Then someone came with the idea, to
-; have one memory space, and store numbers there, but also put the program in the
-; same space and then have the computer read the instructions from memory.
-; Now a small program can write a larger program, and then execute it!
-; It is similar to how the human brain continuously reconditions its synapses
-; in a perpetual learning process. At last a machine with the potential of artificial
-; intelligence was born. So a memory item is identified by a number,
-; the "address" of the memory item.
+; ------------------ 0. introduction -------------------------------------------
+; A famous chess player once stated that, if we were to find aliens
+; living on another planet, we should expect that they will play
+; Go. Likewise discovering Forth is something every civilisation in
+; the universe will do eventually. Chuck Moore claims to have
+; discovered, rather than invented, Forth.  You'll find the structure
+; of yourforth simple, and compelling.
+;
+; The model for Forth is the stored program computer, actually the
+; best invention since sliced bread. The first computers had a work
+; area where numbers were stored, and punched card that represented
+; the instructions. Then someone came with the idea, to have one
+; memory space, and store numbers there, but also put the program in
+; the same space and then have the computer read the instructions from
+; memory.  Now a small program can write a larger program, and then
+; execute it!  It is similar to how the human brain continuously
+; reconditions its synapses in a perpetual learning process. At last a
+; machine with the potential of artificial intelligence was born. So a
+; memory item is identified by a number, the "address" of the memory
+; item.
 
-; The first program-building program was probably an assembler, but at the time the larger
-;  program could not be deposited into memory and had to punched onto tape.
-; Guess what? It is still done this way, only the tape has been replaced
-; by disk files or EPROM. Only the artificial-intelligence-languages,
-; LISP and Forth, allow to have a program that extends itself
-; indefinitely. Interestingly, you will find that most programs cripple
-; the computer, by separating into a text and a data segment, the
-; equivalent of the punched card and the work area of above. Not so in
-; Forth, were data and code belonging together remain close.
-; It is hard to instruct a traditional compiler like GNU's to have such a
-; unified memory space. It is illustrative that the option for the linker is
-; called -magic and it is is probably only there, because Richard
-; Stallman is a fan of that other ai-capable language, LISP. This applies
-; to GNU as. Of course what we want is simple, and with fasm doing
-; simple things is easy.
+; The first program-building program was probably an assembler, but at
+; the time the larger program could not be deposited into memory and
+; had to punched onto tape.  Guess what? It is still done this way,
+; only the tape has been replaced by disk files or EPROM. Only the
+; artificial-intelligence-languages, LISP and Forth, allow to have a
+; program that extends itself indefinitely. Interestingly, you will
+; find that most programs cripple the computer, by separating into a
+; text and a data segment, the equivalent of the punched card and the
+; work area of above. Not so in Forth, were data and code belonging
+; together remain close.  It is hard to instruct a traditional
+; compiler like GNU's to have such a unified memory space. It is
+; illustrative that the option for the linker is called -magic and it
+; is is probably only there, because Richard Stallman is a fan of that
+; other ai-capable language, LISP. This applies to GNU as. Of course
+; what we want is simple, and with fasm doing simple things is easy.
 
-; The first c-compiler in existance was written in assembler (what else?)
-; but then immediately they rewrote the compiler in c.
-; Likewise a PL-1 compiler is written in PL-1, an algol68 compiler
-; is written in algol68. Can't a Forth be written in Forth?
-; Actually it is! It is even easier. If you want to add features to a c-compiler
-; you must edit the source and rebuild it. Being an interpreter yourforth
-; just can include a Forth source file with the facilities
-; you want. Only the kernel here has to be written in assembler,
-; like the first c-compiler ever.
-; Even in this assembler source you will see that most of the code is actually
-; Forthcode, that is compiled by the assembler (with a renaming convention).
-; In the last part there is even Forth source that is compiled by yourforth
-; at startup. That is equivalent to including a source file, but less messy.
-; Forth is the only language simple enough to make this feasible.
-; For the following you must be familiar with the concept of a data stack
+; The first c-compiler in existance was written in assembler (what
+; else?)  but then immediately they rewrote the compiler in c.
+; Likewise a PL-1 compiler is written in PL-1, an algol68 compiler is
+; written in algol68. Can't a Forth be written in Forth?  Actually it
+; is! It is even easier. If you want to add features to a c-compiler
+; you must edit the source and rebuild it. Being an interpreter
+; yourforth just can include a Forth source file with the facilities
+; you want. Only the kernel here has to be written in assembler, like
+; the first c-compiler ever.  Even in this assembler source you will
+; see that most of the code is actually Forthcode, that is compiled by
+; the assembler (with a renaming convention).  In the last part there
+; is even Forth source that is compiled by yourforth at startup. That
+; is equivalent to including a source file, but less messy.  Forth is
+; the only language simple enough to make this feasible.  For the
+; following you must be familiar with the concept of a data stack
 ; (ex. 0.1) and with behaviour of yourforth under a test (ex. 0.2).
 
 ; ---------------------- 1. memory and addressing ---------------------------------
@@ -96,54 +106,57 @@
 ; (which are just numbers)
 ; up to ca. 2 Gbyte. We will shun negative addresses in yourforth.
 
-; The word "word" has a special meaning in Forth, so using official Forth jargon
-; "cell" for those chunks diminishes confusion.
+; The word "word" has a special meaning in Forth, so using official
+; Forth jargon "cell" for those chunks diminishes confusion.
 
-cw      =     4                 ; Cell width
+cw = 4                          ; Cell width
 
-; 32 bits also happens to be the word size of the processor we are using, or more
-; precisely -- because it is probably a 64-bit processor -- of the wordsize we
-; are instructing the processor to use.
+; 32 bits also happens to be the word size of the processor we are
+; using, or more precisely -- because it is probably a 64-bit
+; processor -- of the wordsize we are instructing the processor to
+; use.
 
-        use32
+use32
 
 ; This is not enough, Linux must know that this is a 32 bit (ELF)
 ; executable (not ELF64), to start the program in the right mode.
 ; This is the way to instruct fasm to put such a header at the front
 ; of our program.
 
-        FORMAT  ELF EXECUTABLE ; fasm makes an executable directly, no linker.
+FORMAT  ELF EXECUTABLE          ; fasm makes an executable directly, no linker.
 
-; We are not particularly interested at what address Forth starts, as long as
-; we have enough bytes to work with, and
-; that's what we define here. It is made to work, by declaring the right amount
-; of space.
+; We are not particularly interested at what address Forth starts, as
+; long as we have enough bytes to work with, and that's what we define
+; here. It is made to work, by declaring the right amount of space.
 ; (exercise)
-;
-forthsize      =     0x100000   ; One megabyte, for starters.
-;
+
+forthsize   = 0x100000          ; One megabyte, for starters.
 tasksize    = 0x10000           ; Total size of the uninitialised memory near EM
-stacksize   = tasksize/4        ;  Its subdivisions.
+stacksize   = tasksize/4        ; Its subdivisions.
 cibsize     = tasksize/2
 
 ; ---------------------- 2. Communicating with the world --------------------
-; Forth is an interpreter, an environment that you can type commands into
-; to get them executed.
-; Characters are glyph's, the bitmaps on the screen, that are associated
-; with the content of one byte.
-; Forth doesn't care much what the console
-; shows you, nor what content results from pressing a particular key.
-; Internally only rows of bytes are compared, and build up,
+; Forth is an interpreter, an environment that you can type commands
+; into to get them executed.
+;
+; Characters are glyphs, the bitmaps on the screen, that are
+; associated with the content of one byte.  Forth doesn't care much
+; what the console shows you, nor what content results from pressing a
+; particular key.
+;
+; Internally, only rows of bytes are compared, and build up,
 ; and they are passed to the console for display.
 ; The typing and the showing of results goes through
 ; a "console" which is typically a terminal window on a Linux X-screen, but
 ; could equally well be an old fashioned VT100 terminal connected with a
-; 100 m RS232 line. Linux has the convenient notions of a "standard input" and
-; a "standard output" with facilities to use them. We let Linux take care of
-; how this i/o is setup, and within Forth we just use it.
-; This file is in UTF-8, but the character encoding doesn't count for much in Forth.
-; (ex. 2.1). The inventor of Forth, Chuck Moore uses a Huffman
-; encoding of his whim for colorforth.
+; 100 m RS232 line.
+;
+; Linux has the convenient notions of a "standard input" and a
+; "standard output" with facilities to use them. We let Linux take
+; care of how this i/o is setup, and within Forth we just use it.
+; This file is in UTF-8, but the character encoding doesn't count for
+; much in Forth.  (ex. 2.1). The inventor of Forth, Chuck Moore uses a
+; Huffman encoding of his whim for colorforth.
 
 ; This brings us to the subject of the interface with the Operating
 ; System. The interfacing with Linux is brutally direct. We use the system calls,
@@ -170,101 +183,121 @@ __NR_fork    =     0x2
 __NR_waitpid =     0x7
 __NR_pipe    =     0x2a
 
-; See XOS of how the dispatching takes place. (ex. 2.2)
-; The numbers have been copied from a secret place in Linux's include hierarchy (exercise)
-; and the exact names are retained, which means an exception to the naming convention
-; that words containing capitals or underscores are Forth names.
+; See XOS of how the dispatching takes place. (ex. 2.2) The numbers
+; have been copied from a secret place in Linux's include hierarchy
+; (exercise) and the exact names are retained, which means an
+; exception to the naming convention that words containing capitals or
+; underscores are Forth names.
 ;
 
-; Experienced assembler programmers expect two segments, one that we will fill
-; with our forth code, and one unitialized that may be very large.
-; (We could get by with one segment if we initialize all space. Then we'll
-; have 1 Gbyte executables.)
-; The first segment would be marked BITS (or some such), and the second one NOBIT,
-; and while linking we
-; would have made sure that they fit snugly together. Now this is a bit silly,
-; because the assembler perfectly knows that the NOBITS part is not initialised.
-; Also it is not easy. Fitting two segments snugly goes against the spirit of the
-; linker. There is no end of incantations needed, and worse yet, the high priests
-; change those at will.
-; Surprise! fasm doesn't have this nonsensical keyword. Not only doesn't it store
-; the content of segments without content, it doesn't store the uninitialised part
-; of segments. We can put everything in
-; one segment, and the uninitialised part occupies no room on our hard disk.
+; Experienced assembler programmers expect two segments, one that we
+; will fill with our forth code, and one unitialized that may be very
+; large. (We could get by with one segment if we initialize all space.
+; Then we'll have 1 Gbyte executables.)
 
-               segment executable readable writable
+; The first segment would be marked BITS (or some such), and the
+; second one NOBIT, and while linking we would have made sure that
+; they fit snugly together. Now this is a bit silly, because the
+; assembler perfectly knows that the NOBITS part is not initialised.
+;
+; Also it is not easy. Fitting two segments snugly goes against the
+; spirit of the linker. There is no end of incantations needed, and
+; worse yet, the high priests change those at will.
+;
+; Surprise! fasm doesn't have this nonsensical keyword. Not only
+; doesn't it store the content of segments without content, it doesn't
+; store the uninitialised part of segments. We can put everything in
+; one segment, and the uninitialised part occupies no room on our hard
+; disk.
+
+segment executable readable writable
+
+; So one segment, no separation between the punch cards containing
+; executable code and a workspace containing our data. We can have the
+; computer invent a program, put it into its memory then execute
+; it. The last part of this source is Forth code. The first part is
+; sufficient for compiling that during startup.  It is fast enough
+; that you will not notice it.  (exercise).
 
-; So one segment, no separation between the punch cards containing executable
-; code and a workspace containing our data. We can have the computer invent
-; a program, put it into its memory then execute it. The last part of this source,
-; is Forth code. The first part is sufficient for compiling that during startup.
-; It is fast enough that you will not notice it.  (exercise).
-
+; == start of code ==
 bm:                     ; This is the first address of Forth.
 
-; As said, we are not particularly interested in what address bm represents and don't
-; force the assemblers hand.
+; As said, we are not particularly interested in what address bm
+; represents and don't force the assemblers hand.
 
-; You probably know a little bit how an interpreter works. Contrary to a compiler
-; that may inspect a whole file, it takes the input one word at a time.
-; In Forth word's are separated by blank space. The word is looked up in a list,
-; and it is executed, which means that it gets in control. There is no "interpreter
-; loop" that sniffs the word out, and refuses it if it is no good. No. You type
-; "DROP" and if it's there, you get it. The Intel program counter is set
-; to the machine code of "DROP" and the ship sails.
-; Not all that we want the interpreter to understands can be put in the list, e.g.
-; we can't put all 32 bit numbers there. There are other notations for
-; expressions that are known at compile time and constant : "aap" 1234 0x1234.
-; We'll call those denotations.
-; The solution for denotations, is that it sufficient to have a partial
-; or ambiguous match. yourforth requires that the first characters are
-; recognized, so it can handle a 0x1234 notation for hexadecimal but not
-; Intel's 1234H.
-; Being a prefix is merely a property of the Forth definition and it doesn't
-; make looking up a word all that harder.
-; So, if the first part of a word matches a prefix definition in the
-; list, e.g. " for strings, then the definition with name `` " ''
-; is executed. For you new to Forth, a string consisting of one double
-; quote is a perfectly good Forth name. Get used to it!
-; It itself takes care of parsing the remainder of the denotation.
-; At the very end of the list we have a catch-all, which always matches,
-; because it is the empty string. This interprets the string as a
-; number. I admit, this is a bit of a trick.
+; == overview of forth words ==
+;
+; You probably know a little bit how an interpreter works. Contrary to
+; a compiler that may inspect a whole file, it takes the input one
+; word at a time.
+;
+; In Forth, words are separated by blank space. The word is looked up
+; in a list, and it is executed, which means that it gets in
+; control. There is no "interpreter loop" that sniffs the word out,
+; and refuses it if it is no good. No. You type "DROP" and if it's
+; there, you get it. The Intel program counter is set to the machine
+; code of "DROP" and the ship sails.
+;
+; Not all that we want the interpreter to understands can be put in
+; the list, e.g.  we can't put all 32 bit numbers there. There are
+; other notations for expressions that are known at compile time and
+; constant : "aap" 1234 0x1234.  We'll call those denotations.
+;
+; The solution for denotations is that it's sufficient to have a
+; partial or ambiguous match. yourforth requires that the first
+; characters are recognized, so it can handle a 0x1234 notation for
+; hexadecimal but not Intel's 1234H.
+;
+; Being a prefix is merely a property of the Forth definition and it
+; doesn't make looking up a word all that harder. So, if the first
+; part of a word matches a prefix definition in the list, e.g. " for
+; strings, then the definition with name `` " '' is executed.
+;
+; For you new to Forth, a string consisting of one double quote is a
+; perfectly good Forth name. Get used to it!  It itself takes care of
+; parsing the remainder of the denotation.  At the very end of the
+; list we have a catch-all, which always matches, because it is the
+; empty string. This interprets the string as a number. I admit, this
+; is a bit of a trick.
 
-; Now the intelligent part. You can use the Forth system to extend itself by
-; instructing the interpreter to add a new command to the list.
-; We will discuss that later in great detail. For now let's sketch how
-; the dictionary looks. It is basically a list of Forth words, each with
-; a header. The list is expandable, and the most recent word is highest
-; in memory. In Forth you can redefine a word, then it hides a word of
-; that same name that might exist. You get a warning, but it is not an
-; error. In this way you can replace a word with a version with
-; debugging information, you can use the old version to build the word.
-; In interactive sessions this feature is often used to correct
-; mistakes. Oops, forgot a carriage return. Let me just redefine it
-; as itself plus a carriage return.
+; == The Dictionary ==
+;
+; Now the intelligent part. You can use the Forth system to extend
+; itself by instructing the interpreter to add a new command to the
+; list.  We will discuss that later in great detail. For now let's
+; sketch how the dictionary looks. It is basically a list of Forth
+; words, each with a header. The list is expandable, and the most
+; recent word is highest in memory. In Forth you can redefine a word,
+; then it hides a word of that same name that might exist. You get a
+; warning, but it is not an error. In this way you can replace a word
+; with a version with debugging information, you can use the old
+; version to build the word.  In interactive sessions this feature is
+; often used to correct mistakes. Oops, forgot a carriage return. Let
+; me just redefine it as itself plus a carriage return.
 ;
 ; Forth definitions despite their division in categories like colon
-; definitions, variables, constants, cd-objects are uniform. Zooming in
-; we see the header, a structure with 5 fields each of one cell,
+; definitions, variables, constants, cd-objects are uniform. Zooming
+; in we see the header, a structure with 5 fields each of one cell,
 ; followed by memory that is owned by this definition, then the
 ; following header. What is in the memory is up to the definition. You
-; may consider this Forth's version of an object. If there is one thing
-; to remember about objects that is that objects have a character and an
-; identity. An objects character, its type or class, is determined by
-; its behaviour or code. The identity of an object is determined by the
-; data it carries. Likewise Forth's object have a code field and a data
-; field. If you are into objects, you may associate the code field with
+; may consider this Forth's version of an object. If there is one
+; thing to remember about objects, it is that objects have a character
+; and an identity. An object's character, its type or class, is
+; determined by its behaviour or code. The identity of an object is
+; determined by the data it carries. Likewise, Forth's objects have a
+; code field and a data field. You may associate the code field with
 ; methods and the data fields with fields in traditional objects. You
 ; will however discover that Forth is uncannily concrete and precise.
 ;
 ; The list mechanism requires a link field. This starts at the most
 ; recent word. Its link contains the address of the header of the
-; previous definition, and so on, and the last definition contains a
-; zero. Then of course there is one field for the name. The flag field
-; with bits up for miscellaneous properties, brings the field count to 5.
+; previous definition, and so on. The last definition's link field
+; contains a zero. Then of course there is one field for the name. The
+; flag field, with bits indicating miscellaneous properties, brings
+; the field count to 5.
 
 ; So let's summarize.
+;
 ; A definition consist of a header with 5 fields CDFLN and its data
 ; area. The definitions together make up the memory up to a point that
 ; moves up when adding new definitions. Then we have free
@@ -302,21 +335,24 @@ bm:                     ; This is the first address of Forth.
 ; executing the code at that address. There is no safety net. If that
 ; code doesn't cooperate with Forth-as-a-whole your machine crashes.
 ; (exercise)
+;
 ; You'll see no symbolic definition for field offsets in the assembler code.
 ; The only offsets that occurs is 1*cw, which means the data field offset.
 ; In high level Forth the offsets are handled by words >CFA >DFA etc.
 
-; To an interpreter strings play of course an important role. Forth
-; strings are represented as an address and a length. Putting two things
-; on the stack is of course no problem. This may be unfamiliar for the
-; c-programmer, but familiar for the Pascal programmer. Note that modern
-; character encodings may contain embedded zero's, and several bytes may
-; combine to represent glyph. yourforth doesn't care. If stored in
-; memory the length occupies a whole cell, and the characters follow,
-; one per byte, as far as this file is concerned. Counting those
-; characters is a chore, as we will need a string for each name of a
-; built in command.
-; That chore is easily handled by the assembler using a macro.
+; == strings ==
+
+; Strings play an important role in an interpreter. Forth strings are
+; represented as an address and a length. Putting two things on the
+; stack is of course no problem. This may be unfamiliar for the
+; c-programmer, but familiar for the Pascal programmer. Note that
+; modern character encodings may contain embedded zeros, and several
+; bytes may combine to represent one glyph. yourforth doesn't care. If
+; stored in memory, the length occupies a whole cell, and the
+; characters follow, one per byte, as far as this file is
+; concerned. Counting those characters is a chore, as we will need a
+; string for each name of a built in command.  That chore is easily
+; handled by the assembler using a macro.
 
 macro string  content
 {
@@ -325,175 +361,221 @@ macro string  content
 startstring:
     db    content
 endstring:
-        align    cw
+    align    cw
 }
 
 ; "content" is of course the string itself, and fasm treats the start
 ; and the end of the string as locals, i.e. they are generated new for each
-; string and are not visible outside the macro's.
-; DD lays down a 32 bit value. It is short for DD, "define double (16-bits) word ".
-; In yourforth a lot of DD's are used, to represent headers as well as interpreted
-; code. You see that we keep those cells aligned to 32 bit boundaries. This is
-; not strictly necessary, but it makes inspecting memory so much easier.
-; <I'm tempted to use a 'fix macro' to redefine DD as DC >
+; string and are not visible outside the macro.
+;
+; DD lays down a 32 bit value. It is short for DD, "define double
+; (16-bits) word ".  In yourforth a lot of DD's are used, to represent
+; headers as well as interpreted code. You see that we keep those
+; cells aligned to 32 bit boundaries. This is not strictly necessary,
+; but it makes inspecting memory so much easier.  <I'm tempted to use
+; a 'fix macro' to redefine DD as DC >
 
+; == header macro ==
+;
 ; The header macro lays down the 5 fields in memory. You don't need to understand
 ; the following fully yet. The details are introduced gradually as each type of
 ; definition will be explained where it first occurs.
-; All fields are passed to the macro
-; as is, except for the name that is passed as a string. The string is
-; to be laid out in memory just like in the string macro and a pointer
-; to that is put in the name field.
+;
+; All fields are passed to the macro as is, except for the name that
+; is passed as a string. The string is to be laid out in memory just
+; like in the string macro and a pointer to that is put in the name
+; field.
 
-macro header dea, cfield,dfield,ffield,lfield,forthname
-{
+macro header dea, cfield,dfield,ffield,lfield,forthname {
     local nfield, startstring, endstring
-nfield:         dd    endstring -startstring
-startstring:    db    forthname
+nfield:
+    dd  endstring -startstring
+startstring:
+    db  forthname
 endstring:
-        align    cw
-dea:  dd      cfield, dfield, ffield, lfield, nfield
+    align    cw
+dea:
+    dd  cfield, dfield, ffield, lfield, nfield
 lastlink EQU dea
 }
 
 ; Learn the five letters cdfln by heart!
 ; They stand for code, data, flag, link and name.
 ;
-; Let's look at an example first.
+; Let's look at an example:
+;
 ;    header  _BM_,   docon, bm, 0, lastlink, "BM"
-; This is a constant containing the bottom of the memory.
-; _BM_ is the name such as used in the assembler, "BM" is the name
-; within Forth. This string must be visible from Forth, unlike _BM_
-; and bm, that stay within the assembler.
-; docon is the code executed for a constant.
-; bm is the data, i.e. a constant known by the assembler, which is
-; in this case the label representing the bottom of the memory,
-; that we defined above.
-; 0 means that there are no flags. lastlink just means normal linking.
+;
+; This is a constant containing the bottom of the memory.  _BM_ is the
+; name such as used in the assembler, "BM" is the name within
+; Forth. This string must be visible from Forth, unlike _BM_ and bm,
+; that stay within the assembler.  docon is the code executed for a
+; constant.  bm is the data, i.e. a constant known by the assembler,
+; which is in this case the label representing the bottom of the
+; memory, that we defined above.  0 means that there are no
+; flags. lastlink just means normal linking.
 ;
 ; Apart from a better overview and taking care of name strings,
-; "header" makes one other thing easier. It is cumbersome to fill
-; in lfield with the name of the previous definition. By setting
-; lastlink -- changing it with every invocation of header -- the name of
-; the previous definition is always available as "lastlink".
-; So you will see that almost always all header specifies lastlink
-; for lfield.
-; As a result a definition can be moved around without changes to its header.
-; We can always override this by replacing
-; "lastlink" by the actual value we want to have.
-; "dea" is the name used within the assembler. Remember forthname is a
-; string like "+" that probably is not an acceptable name for the word
-; in the assembler. So we need "dea" to use the word in the assembler.
-; The "dea" passed to the header macro, results in that name being usable
-; in the assembler as a number and an address. It contains only lower
-; case characters and underscores.
+; "header" makes one other thing easier. It is cumbersome to fill in
+; lfield with the name of the previous definition. By setting lastlink
+; -- changing it with every invocation of header -- the name of the
+; previous definition is always available as "lastlink".  So you will
+; see that almost always all header specifies lastlink for lfield.
+;
+; As a result a definition can be moved around without changes to its
+; header.  We can always override this by replacing "lastlink" by the
+; actual value we want to have.  "dea" is the name used within the
+; assembler. Remember forthname is a string like "+" that probably is
+; not an acceptable name for the word in the assembler. So we need
+; "dea" to use the word in the assembler.  The "dea" passed to the
+; header macro, results in that name being usable in the assembler as
+; a number and an address. It contains only lower case characters and
+; underscores.
 
-; Each name in yourforth itself contains any assortion of weird characters and capital
-; letters, no lower case. Let's take R@ as an example.
+; == naming convention ==
+;
+; Each name in yourforth itself contains any assortion of weird
+; characters and capital letters, no lower case. Let's take R@ as an
+; example.
+;
 ; It is identified by it dea: 'R@ a denotation, a fixed number.
 ; Within the assembler this number is represented by the name r_fetch.
+;
 ; A simpler example is DROP. The assembler name is "DROP", which is the same
 ; number as 'DROP in yourforth.
-; Here is the renaming convention:
-; The capitals are kept, and if the resulting name clashes in the assembler,
-; underscores are added before and after.
-; Any special characters are replaced according to the following table.
-; We'll have to write them out, like
-; !     @     %        ,    *    (     <      >      /      +    -
-; fetch store percent comma star paren less  greater slash  plus minus
 ;
-; [        ~
-; bracket  not
+; Here is the renaming convention:
+; - The capitals are kept
+; - If the resulting name clashes in the assembler,
+;   underscores are added before and after.
+; - Special characters are replaced according to the following table:
+;
+;    !     @     %        ,    *    (     <      >      /      +    -
+;    fetch store percent comma star paren less  greater slash  plus minus
+;
+;    [        ~
+;    bracket  not
 ;
 ; Sometimes < and > are used to indicate data transfer and are then
-; named to or from. I'm lazy and translate (CREATE) to paren_CREATE,
-; not leftparen_CREATE_rightparen.
+; named 'to' or 'from'. I'm lazy and translate (CREATE) to 'paren_CREATE',
+; not 'leftparen_CREATE_rightparen'.
 ;
-; fetch and store are used in forth names that fetch something from memory
-; or store something in memory.
+; 'fetch' and 'store' are used in forth names that fetch something
+; from memory or store something in memory.
 ;
 ; A denotation is a constant value that is generated on the fly by
 ; the compiler or interpreter.
+;
 ; Because this is difficult, we postpone it.
 
+; == definition types ==
+;
 ; The most important types of definitions are lowlevel code, high level code,
 ; low level objects(constants, variables/buffers) and high level objects.
-; They are gradually introduced by example, but here is an overview of the
-; different types. The names starting in "do" are assembler labels.
-; - cfield contains docon. The definition is a constant, i.e. when executed it
-;   puts a constant on the stack. That constant is present at the DFA.
-; - cfield contains dobuf. The definition is a variable or buffer, i.e. when executed it
-;    puts an address on the stack of an area where data can be stored.
-;    That address is present at the DFA, typically dea+5*cw
-; - cfield contains docol. docol is the interpreter of Forth. It takes care that
-;   the high level code is executed, that is found via the DFA. This typically
-;   contains dea+5*cw. In other words the high level code contained at the post
-;   header address is executed. These are the ordinary functions.
+;
+; They are gradually introduced by example, but here is an overview of
+; the different types. The names starting in "do" are assembler
+; labels.
+;
+; - cfield contains docon. The definition is a constant, i.e. when
+;   executed it puts a constant on the stack. That constant is present
+;   at the DFA.
+;
+; - cfield contains dobuf. The definition is a variable or buffer,
+;   i.e. when executed it puts an address on the stack of an area
+;   where data can be stored.  That address is present at the DFA,
+;   typically dea+5*cw
+;
+; - cfield contains docol. docol is the interpreter of Forth. It takes
+;   care that the high level code is executed, that is found via the
+;   DFA. This typically contains dea+5*cw. In other words the high
+;   level code contained at the post header address is executed. These
+;   are the ordinary functions.
+;
 ; - cfield contains dea+5*cw. In other words, its machine code is
 ;   unique and contained at the post header address to be executed.
 ;   These are the regular low level words that make up the Forth
 ;   language like "+" and "DROP". Of course this code is different for
 ;   all of those words.
-; - cfield contains dodo. The Forth definition is generated using a CREATE DOES>
-;   construct, Forth's poor man's objects of the 1970's. We will elaborate on this later.
 ;
+; - cfield contains dodo. The Forth definition is generated using a
+;   CREATE DOES> construct, Forth's poor man's objects of the
+;   1970's. We will elaborate on this later.
 
-        ;
 figrel  =     6
-dummymask   =     0x01
-invisiblemask   =     0x02
-immediatemask   =     0x04
-denotationmask   =     0x08
+dummymask     =     0x01
+invisiblemask =     0x02
+immediatemask =     0x04
+denotationmask=     0x08
 prefixmask = immediatemask+denotationmask
-epipe   =     0x20
+epipe         =     0x20
 
-;  The virtual machine reserves some of the Intel registers for its own.
-;  In the first place we need an interpretation pointer, to keep track
-;  of where we are in the interpreted code. It points to the -- high
-;  level -- instruction that is to be executed after the current
-;  definitions finishes. This is similar to the program counter in an
-;  assembly program and we will use SI for it.
-;  Then of course we need a data stack, for which we use
-;  the Intel stack, and the stack pointer is just SP.
-;  This leaves us with the return stack, that keeps track of
-;  where we are. Whenever SI is needed to interpret another high
-;  level definition, the previous value is stored there, and restored
-;  when we want to continue with the calling definition.
-;  Intel has run out of stacks
-;  already, but we can emulate a stack using the BP register.
-;  It just means that we have to use a couple of instructions to push
-;  SI, or pop it.
+; == register usage ==
 ;
-;  Within yourforth you have the constants DSP0 and RSP0 that contain
-;  the initial stack pointers for the data and the return stack
-;  respectively. [ ex. 2 ]
-;   COLD is the Forth definition that starts
-;  up Forth. So we load the registers SP and BP with the data field of
-;  DSP0 and RSP0 and SI with the post header address of COLD, where its
-;  Forth code resides. It ends with machine code that results in executing
-;  the next Forth instruction. This is done all the time, so we have
-;  a shorthand for it, called next.
+; The virtual machine reserves some of the Intel registers for its
+; own. In the first place we need an interpretation pointer, to keep
+; track of where we are in the interpreted code. It points to the --
+; high level -- instruction that is to be executed after the current
+; definitions finishes. This is similar to the program counter in an
+; assembly program and we will use SI for it.  Then of course we need
+; a data stack, for which we use the Intel stack, and the stack
+; pointer is just SP.  This leaves us with the return stack, that
+; keeps track of where we are. Whenever SI is needed to interpret
+; another high level definition, the previous value is stored there,
+; and restored when we want to continue with the calling definition.
+; Intel has run out of stacks already, but we can emulate a stack
+; using the BP register.  It just means that we have to use a couple
+; of instructions to push SI, or pop it.
+;
+; Within yourforth you have the constants DSP0 and RSP0 that contain
+; the initial stack pointers for the data and the return stack
+; respectively. [ ex. 2 ]
+;
+; COLD is the Forth definition that starts up Forth. So we load the
+; registers SP and BP with the data field of DSP0 and RSP0 and SI with
+; the post header address of COLD, where its Forth code resides. It
+; ends with machine code that results in executing the next Forth
+; instruction. This is done all the time, so we have a shorthand for
+; it, called next.
+
+; register usage summary:
+;
+; x86  forth usage
+; ---  -----------
+; esi | interpreter pointer
+; esp | pointer for data stack
+; ebp | pointer for return stack
+; eax | work area. `next` populates with dea (start of current header)
+; ebx | work
+; ecx | work
+; edx | work
+;
+; (other registers seem to be untouched --mjw)
 
 macro   next {
-        lodsd
+        lodsd                   ;   eax := ds[esi]
         jmp     dword[eax]
 }
 
-; Now the choice for SI becomes clear. The lodsd instruction loads the dea
-; from the instruction stream into EAX, and increments SI on the way,
-; making it point to the next Forth instruction.
+; Now the choice for SI becomes clear. The `lodsd` instruction loads the
+; dea from the instruction stream into EAX, and increments SI on the
+; way, making it point to the next Forth instruction.
+;
 ; [Actually this is a bit tricky. This requires that the so called
 ; direction bit is set to forward, using the instruction cld. After
 ; executing the instruction std, lodsd is switched to decrementing.
 ; We keep the forward direction always.]
+;
 ; Then we jump to what is contained in the code field of the dea, so actually
 ; [eax+0*cw] . We rely on that code to end again with a ``next'', and if
 ; it needs to use SI (e.g. for nesting), it must restore it beforehand.
 ; exercise with (CREATE)
-; Executing the code is started with an eax that contains the dea of the
-; word. So even if the code field is filled with the same pointer,
-; the objects data is different and results in different data or even different
-; action. OO fan's will recognize this, it is just a self pointer.
+;
+; Executing the code is started with an eax that contains the dea of
+; the word. So even if the code field is filled with the same pointer,
+; the objects data is different and results in different data or even
+; different action. OO fan's will recognize this, it is just a self
+; pointer.
 
         cld     ; This direction must never change, or next stops working
         mov     esp, [DSP_zero+1*cw]
@@ -504,34 +586,36 @@ macro   next {
 ;
 ; The following word is our first high level Forth word or "colon definition"
 ; in Forth speak.
-header  BYE,   docol, BYE+5*cw, 0, FORTH, "BYE"
-    dd      _zero_, _, _,   _one_, XOS
-    dd      EXIT
+    header  BYE,   docol, BYE+5*cw, 0, FORTH, "BYE"
+        dd      _zero_, _, _,   _one_, XOS
+        dd      EXIT
 
 ; Executing this words means that the program jumps to address docol that takes
 ; care that SI is going to point to _zero_ , then does next.
 ; This is possible because eax contains the address BYE of this header
 ; as discussed with the description of the next macro.
 
-docol:  lea     ebp,[ebp - 1*cw]        ; Push SI on the return stack
-        mov     [ebp],esi
-        mov     esi,[eax+1*cw]          ; Fill it with the data field
-        next
+docol:
+    lea     ebp,[ebp-1*cw]          ; Push SI on the return stack
+    mov     [ebp],esi
+    mov     esi,[eax+1*cw]          ; Fill it with the data field
+    next
 
 ; In the case of BYE the data field contains BYE+5*cw, which is the address
 ; that contains _zero_.
+;
 ; So now we have it. Consecutively _zero_ _ _ _one XOS and EXIT are executed.
 ; The word XOS finds 0 X X 1 on the stack, which instructs it to do linux
 ; system call 1 (an exit) with one parameter 0 and two dummy parameters.
 ; This ends the Forth session with a status code of 0, meaning okay. (exercise).
-
+;
 ; [One last remark. Because BYE is our first definition, you may expect it to
 ; have a link of 0 and to be it last in the linked list. But we want the
 ; word FORTH and the denotations to come last, yet not discuss them until later.]
 
 ; EXIT is the reverse of docol. ( In the above case EXIT is not reached.)
 ; This is our first example of a low level word, or "code definition".
-; You see that we use our lastlink trick as described with the header macro.
+; You see that we use our `lastlink` trick as described with the header macro.
 
     header  EXIT,   EXIT+5*cw, 0, 0, lastlink, "EXIT"
         mov     esi,[ebp]               ; Pop SI from the return stack
@@ -545,28 +629,33 @@ docol:  lea     ebp,[ebp - 1*cw]        ; Push SI on the return stack
 
 ; Because you understand Intel assembly language a bit, I present you
 ; with a table of the 5 instructions of the virtual machine:
-;     Forth machine      cells            Intel equivalent
-;     DEA, invocation     1               call XXX
-;     EXIT                1               rts
-;     BRANCH rel          2               jr rel
-;     0BRANCH rel         2               jz rel
-;     LIT value           2               pushi value
-;     expandable          your choice     whatever
 ;
-; That is all there is to it. If it seems few,
-; let me remind you that all operations like + fall under the
-; invocation of a definition. The conditional jump can be used to
-; construct if-endif's (called IF THEN 's in Forth) and begin-until's.
-; Together with the unconditional jump you can have all control
-; constructs.  EXIT BRANCH 0BRANCH LIT are the names of actual
-; definitions in the dictionary. Their invocation is the same as
-; for just any DEA.
+;     Forth machine      cells           Intel equivalent
+;     -----------------  -----------     ----------------
+;     DEA, invocation    1               call XXX
+;     EXIT               1               rts
+;     BRANCH rel         2               jr rel
+;     0BRANCH rel        2               jz rel
+;     LIT value          2               pushi value
+;     expandable         your choice     whatever
+;
+; That is all there is to it. If it seems few, let me remind you that
+; all operations like + fall under the invocation of a definition. The
+; conditional jump can be used to construct if-endif's (called IF THEN
+; 's in Forth) and begin-until's.  ogether with the unconditional jump
+; you can have all control constructs.  EXIT BRANCH 0BRANCH LIT are
+; the names of actual definitions in the dictionary. Their invocation
+; is the same as for just any DEA.
+;
 ; The last line I put in to remind you that this is not the end of it.
 ; You can add basic constructs e.g. special looping constructs later.
 ; You can use assembler language in defining it, and you can do this
 ; in a separate file, that you will choose to include, or not.
+;
 ; FIXME: actual those looping are still built in.
 
+; == core vm words ==
+
 ; LIT does something very similar to next, it fetches
 ; the cell from SI with auto increment, using the now familiar
 ; lodsd instruction. Now we have to put that on the data stack.
@@ -576,12 +665,11 @@ docol:  lea     ebp,[ebp - 1*cw]        ; Push SI on the return stack
         next
 
 ; BRANCH also fetches a cell in line that serves as an offset to SI.
-; The three instruction
-; following round it up to a multiple of cw, an action that is called
-; alignment. Why that is done, we'll come back to later.
-; Normally the offset is a multiple of cw and nothing happens.
-; Si is incremented with the offset and
-; code is hence to forth fetched from there.
+; The three instruction following round it up to a multiple of cw, an
+; action that is called alignment. Why that is done, we'll come back
+; to later.  Normally the offset is a multiple of cw and nothing
+; happens. SI is incremented with the offset and code is hence to
+; forth fetched from there.
 
     header  BRANCH,   BRANCH+5*cw, 0, 0, lastlink, "BRANCH"
 BRAN1:  lodsd
@@ -590,6 +678,7 @@ BRAN1:  lodsd
         inc     eax
         add     esi,eax
         next
+
 ; 0BRANCH is similar to BRANCH. The difference is just that before
 ; the offset is added, it can be zeroed. This depends on a flag
 ; popped from the data stack.
@@ -619,20 +708,23 @@ macro whileto  label
 { dd  zero_BRANCH, label-$-cw   }
 macro untilto  label
 { dd  zero_BRANCH, label-$-cw   }
-; They all have in common that on the preceeding condition
-; being true/non-zero/on,
-; the code following is executed. Otherwise we skip to "label".
-; For ifto that code is executed once up till "label".
-; For whileto the code following
-; is part of the loop, so we stay in the loop. The label is where we want
-; to jump out of the loop.
-; For untilto the code following is outside of a loop, so we fall through
-; on a true condition. Now the label is the start of the loop.
+
+; They all have in common that on the preceeding condition being
+; true/non-zero/on, the code following is executed. Otherwise we skip
+; to "label".
+;
+; - For `ifto` that code is executed once up till "label".
+; 
+; - For `whileto` the code following is part of the loop, so we stay
+; in the loop. The label is where we want to jump out of the loop.
+;
+; - For `untilto` the code following is outside of a loop, so we fall
+; through on a true condition. Now the label is the start of the loop.
+;
 ;  Don't worry, Forthers hate complicated control structures. In the
 ;  code of <your>forth you will not find a single nested loop.
-;
 
-; -------------------- low level definitions: operators ----------------------------
+; ------------------- low level definitions: operators ------------------------
 ; Operators are definitions that take all inputs from the stack,
 ; do some transformation and put all results back on the stack. In other
 ; words they have no side effects. Because they are so simple and fundamental
@@ -642,8 +734,9 @@ macro untilto  label
 ; This words does nothing.
     header  NOOP,   NOOP+5*cw, 0, 0, lastlink, "NOOP"
        next
-; Another word that does almost nothing, it pushes a "whatever" value to the
-;  stack
+
+; Another word that does almost nothing.
+; It pushes a "whatever" value to the stack.
     header  _,   _+5*cw, 0, 0, lastlink, "_"
         push    eax
         next
@@ -677,6 +770,8 @@ macro untilto  label
         pop     ebx
         push    eax
         next
+
+;== '2' words (perform some action twice) ===
     header  two_DROP,   two_DROP+5*cw, 0, 0, lastlink, "2DROP"
         pop     eax
         pop     eax
@@ -689,14 +784,13 @@ macro untilto  label
         push    edx
         push    eax
         next
-
     header  two_SWAP,   two_SWAP+5*cw, 0, 0, lastlink, "2SWAP"
         pop     ebx
         pop     ecx
         pop     eax
         pop     edx
-        push     ecx
-        push     ebx
+        push    ecx
+        push    ebx
         push    edx
         push    eax
         next
@@ -705,14 +799,16 @@ macro untilto  label
         pop     ecx
         pop     eax
         pop     edx
-        push     edx
-        push     eax
-        push     ecx
-        push     ebx
+        push    edx
+        push    eax
+        push    ecx
+        push    ebx
         push    edx
         push    eax
         next
 
+; == return stack as scratchpad ==
+
 ; The return stack can be used for scratch. For an example see SDSWAP
     header  to_R,   to_R+5*cw, 0, 0, lastlink, ">R"
         pop     ebx
@@ -728,6 +824,7 @@ macro untilto  label
         mov     eax,[ebp]
         push    eax
         next
+
 ; SDSWAP reorders a,b1,b2 on the stack into b1,b2,a.
 ; We have no way to directly get b1 into place, but if we first
 ; move b2 out of the way to the return stack, we can, by swapping.
@@ -793,7 +890,7 @@ macro untilto  label
         sbb     eax,eax
         push    eax
         next
-; NOT is just an other name for 0=. We copy the code field of "0="
+; NOT is just another name for 0=. We copy the code field of "0="
     header  _NOT_,   (zero_equal+5*cw),  0, 0, lastlink, "NOT"
     header  zero_less,   zero_less+5*cw, 0, 0, lastlink, "0<"
         pop     eax
@@ -948,7 +1045,7 @@ macro untilto  label
     header  M_star,   M_star+5*cw, 0, 0, lastlink, "M*"
         pop     eax
         pop     ebx
-        imul     ebx
+        imul    ebx
         xchg    eax,edx
         push    edx
         push    eax
@@ -959,7 +1056,7 @@ macro untilto  label
         pop     ebx
         pop     edx
         pop     eax
-        idiv     ebx
+        idiv    ebx
         push    edx
         push    eax
         next
@@ -1081,7 +1178,7 @@ macro untilto  label
         dd _ALIGN_
         dd EXIT
 
-; ----------------- low level block operations ------------------------------------------
+; ----------------- low level block operations ------------------------------
 ; Operations on blocks of memory. It is of some importance that they are fast.
 ; We need to move a block of memory, initialise it and compare two blocks.
 ; They are in fact wrappers around "rep movsb" "rep stosb" and "rep cmpsb".
