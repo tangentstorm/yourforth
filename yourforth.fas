@@ -12,7 +12,7 @@
 ; and roasted them as well! Next time you only need "fasm/fasm ourforth.fas".
 ; If you're new at Forth you may want to read the Chapter "gentle introduction"
 ; of yourforth.pdf.
-
+
 ; ---------------- preliminary remark -------------------------
 ; Normally a Forth in assembly style would use the official assembler
 ; on the operating system at hand, in our case gas or ``GNU as'' as it is called
@@ -27,7 +27,7 @@
 ; 5. fasm is small, basically an executable.
 ; Also it accommodates symbol reassignment and labels that are local to macro's,
 ; which is kind of essential to the way we want to use macro's.
-
+
 ; ------------------ 0. introduction ------------------------------------
 ; A famous chess player once stated that, if we were to find aliens living on
 ; another planet, we should expect that they will play Go. Likewise
@@ -44,7 +44,8 @@
 ; It is similar to how the human brain continuously reconditions its synapses
 ; in a perpetual learning process. At last a machine with the potential of artificial
 ; intelligence was born. So a memory item is identified by a number,
-;  the "address" of the memory item.
+; the "address" of the memory item.
+
 ; The first program-building program was probably an assembler, but at the time the larger
 ;  program could not be deposited into memory and had to punched onto tape.
 ; Guess what? It is still done this way, only the tape has been replaced
@@ -60,7 +61,7 @@
 ; Stallman is a fan of that other ai-capable language, LISP. This applies
 ; to GNU as. Of course what we want is simple, and with fasm doing
 ; simple things is easy.
-
+
 ; The first c-compiler in existance was written in assembler (what else?)
 ; but then immediately they rewrote the compiler in c.
 ; Likewise a PL-1 compiler is written in PL-1, an algol68 compiler
@@ -77,7 +78,7 @@
 ; Forth is the only language simple enough to make this feasible.
 ; For the following you must be familiar with the concept of a data stack
 ; (ex. 0.1) and with behaviour of yourforth under a test (ex. 0.2).
-
+
 ; ---------------------- 1. memory and addressing ---------------------------------
 ; Memory consists of bytes
 ; and, yes, nothing funny, that are the bytes you buy in the store.
@@ -94,7 +95,7 @@
 ; fairly large numbers, of plus or minus 2000 millions, and addresses
 ; (which are just numbers)
 ; up to ca. 2 Gbyte. We will shun negative addresses in yourforth.
-
+
 ; The word "word" has a special meaning in Forth, so using official Forth jargon
 ; "cell" for those chunks diminishes confusion.
 
@@ -124,7 +125,7 @@ forthsize      =     0x100000   ; One megabyte, for starters.
 tasksize    = 0x10000           ; Total size of the uninitialised memory near EM
 stacksize   = tasksize/4        ;  Its subdivisions.
 cibsize     = tasksize/2
-
+
 ; ---------------------- 2. Communicating with the world --------------------
 ; Forth is an interpreter, an environment that you can type commands into
 ; to get them executed.
@@ -143,7 +144,7 @@ cibsize     = tasksize/2
 ; This file is in UTF-8, but the character encoding doesn't count for much in Forth.
 ; (ex. 2.1). The inventor of Forth, Chuck Moore uses a Huffman
 ; encoding of his whim for colorforth.
-
+
 ; This brings us to the subject of the interface with the Operating
 ; System. The interfacing with Linux is brutally direct. We use the system calls,
 ; that have been given numbers. Each performs a basic functionality, e.g.
@@ -174,7 +175,7 @@ __NR_pipe    =     0x2a
 ; and the exact names are retained, which means an exception to the naming convention
 ; that words containing capitals or underscores are Forth names.
 ;
-
+
 ; Experienced assembler programmers expect two segments, one that we will fill
 ; with our forth code, and one unitialized that may be very large.
 ; (We could get by with one segment if we initialize all space. Then we'll
@@ -192,7 +193,7 @@ __NR_pipe    =     0x2a
 ; one segment, and the uninitialised part occupies no room on our hard disk.
 
                segment executable readable writable
-
+
 ; So one segment, no separation between the punch cards containing executable
 ; code and a workspace containing our data. We can have the computer invent
 ; a program, put it into its memory then execute it. The last part of this source,
@@ -203,7 +204,7 @@ bm:                     ; This is the first address of Forth.
 
 ; As said, we are not particularly interested in what address bm represents and don't
 ; force the assemblers hand.
-
+
 ; You probably know a little bit how an interpreter works. Contrary to a compiler
 ; that may inspect a whole file, it takes the input one word at a time.
 ; In Forth word's are separated by blank space. The word is looked up in a list,
@@ -229,7 +230,7 @@ bm:                     ; This is the first address of Forth.
 ; At the very end of the list we have a catch-all, which always matches,
 ; because it is the empty string. This interprets the string as a
 ; number. I admit, this is a bit of a trick.
-
+
 ; Now the intelligent part. You can use the Forth system to extend itself by
 ; instructing the interpreter to add a new command to the list.
 ; We will discuss that later in great detail. For now let's sketch how
@@ -262,7 +263,7 @@ bm:                     ; This is the first address of Forth.
 ; previous definition, and so on, and the last definition contains a
 ; zero. Then of course there is one field for the name. The flag field
 ; with bits up for miscellaneous properties, brings the field count to 5.
-;
+
 ; So let's summarize.
 ; A definition consist of a header with 5 fields CDFLN and its data
 ; area. The definitions together make up the memory up to a point that
@@ -304,7 +305,7 @@ bm:                     ; This is the first address of Forth.
 ; You'll see no symbolic definition for field offsets in the assembler code.
 ; The only offsets that occurs is 1*cw, which means the data field offset.
 ; In high level Forth the offsets are handled by words >CFA >DFA etc.
-;
+
 ; To an interpreter strings play of course an important role. Forth
 ; strings are represented as an address and a length. Putting two things
 ; on the stack is of course no problem. This may be unfamiliar for the
@@ -335,7 +336,7 @@ endstring:
 ; code. You see that we keep those cells aligned to 32 bit boundaries. This is
 ; not strictly necessary, but it makes inspecting memory so much easier.
 ; <I'm tempted to use a 'fix macro' to redefine DD as DC >
-
+
 ; The header macro lays down the 5 fields in memory. You don't need to understand
 ; the following fully yet. The details are introduced gradually as each type of
 ; definition will be explained where it first occurs.
@@ -354,6 +355,7 @@ endstring:
 dea:  dd      cfield, dfield, ffield, lfield, nfield
 lastlink EQU dea
 }
+
 ; Learn the five letters cdfln by heart!
 ; They stand for code, data, flag, link and name.
 ;
@@ -385,7 +387,7 @@ lastlink EQU dea
 ; The "dea" passed to the header macro, results in that name being usable
 ; in the assembler as a number and an address. It contains only lower
 ; case characters and underscores.
-
+
 ; Each name in yourforth itself contains any assortion of weird characters and capital
 ; letters, no lower case. Let's take R@ as an example.
 ; It is identified by it dea: 'R@ a denotation, a fixed number.
@@ -413,7 +415,7 @@ lastlink EQU dea
 ; A denotation is a constant value that is generated on the fly by
 ; the compiler or interpreter.
 ; Because this is difficult, we postpone it.
-
+
 ; The most important types of definitions are lowlevel code, high level code,
 ; low level objects(constants, variables/buffers) and high level objects.
 ; They are gradually introduced by example, but here is an overview of the
@@ -444,7 +446,7 @@ immediatemask   =     0x04
 denotationmask   =     0x08
 prefixmask = immediatemask+denotationmask
 epipe   =     0x20
-;
+
 ;  The virtual machine reserves some of the Intel registers for its own.
 ;  In the first place we need an interpretation pointer, to keep track
 ;  of where we are in the interpreted code. It points to the -- high
@@ -471,7 +473,7 @@ epipe   =     0x20
 ;  Forth code resides. It ends with machine code that results in executing
 ;  the next Forth instruction. This is done all the time, so we have
 ;  a shorthand for it, called next.
-
+
 macro   next {
         lodsd
         jmp     dword[eax]
@@ -498,6 +500,7 @@ macro   next {
         mov     ebp, [RSP_zero+1*cw]
         mov     esi, COLD+5*cw
         next
+
 ;
 ; The following word is our first high level Forth word or "colon definition"
 ; in Forth speak.
@@ -525,7 +528,7 @@ docol:  lea     ebp,[ebp - 1*cw]        ; Push SI on the return stack
 ; [One last remark. Because BYE is our first definition, you may expect it to
 ; have a link of 0 and to be it last in the linked list. But we want the
 ; word FORTH and the denotations to come last, yet not discuss them until later.]
-;
+
 ; EXIT is the reverse of docol. ( In the above case EXIT is not reached.)
 ; This is our first example of a low level word, or "code definition".
 ; You see that we use our lastlink trick as described with the header macro.
@@ -539,7 +542,7 @@ docol:  lea     ebp,[ebp - 1*cw]        ; Push SI on the return stack
 ; jumps to EXIT+5*cw which is the mov instruction.
 ; So EXIT just abandons the current SI and loads it with what docol has left.
 ; Note that the data field is not used and the content of AX is not used.
-
+
 ; Because you understand Intel assembly language a bit, I present you
 ; with a table of the 5 instructions of the virtual machine:
 ;     Forth machine      cells            Intel equivalent
@@ -563,7 +566,7 @@ docol:  lea     ebp,[ebp - 1*cw]        ; Push SI on the return stack
 ; You can use assembler language in defining it, and you can do this
 ; in a separate file, that you will choose to include, or not.
 ; FIXME: actual those looping are still built in.
-
+
 ; LIT does something very similar to next, it fetches
 ; the cell from SI with auto increment, using the now familiar
 ; lodsd instruction. Now we have to put that on the data stack.
@@ -600,7 +603,7 @@ ZBRAN1: add     esi,eax
         next
 ; This completes the virtual Forth machine that is used in yourforth.
 ; You can however at all times add anything that you can think off.
-
+
 ; Probably you will find 0BRANCH confusing and hard to find out what
 ; code is executed with what flag.
 ; Also here again we want the offsets calculated for us.
@@ -628,7 +631,7 @@ macro untilto  label
 ;  Don't worry, Forthers hate complicated control structures. In the
 ;  code of <your>forth you will not find a single nested loop.
 ;
-;
+
 ; -------------------- low level definitions: operators ----------------------------
 ; Operators are definitions that take all inputs from the stack,
 ; do some transformation and put all results back on the stack. In other
@@ -644,6 +647,7 @@ macro untilto  label
     header  _,   _+5*cw, 0, 0, lastlink, "_"
         push    eax
         next
+
 ; -------------------- low level definitions: stack operations -----------------
 ; Stack operations reorder, duplicate or remove items from the data stack
 ; without doing a transformation on them. They are essential to Forth, of course.
@@ -685,6 +689,7 @@ macro untilto  label
         push    edx
         push    eax
         next
+
     header  two_SWAP,   two_SWAP+5*cw, 0, 0, lastlink, "2SWAP"
         pop     ebx
         pop     ecx
@@ -707,6 +712,7 @@ macro untilto  label
         push    edx
         push    eax
         next
+
 ; The return stack can be used for scratch. For an example see SDSWAP
     header  to_R,   to_R+5*cw, 0, 0, lastlink, ">R"
         pop     ebx
@@ -732,6 +738,7 @@ macro untilto  label
         dd      R_from  ; b1,a,b2 : almost correct
         dd      SWAP
         dd      EXIT
+
 ; ------------------------------------------------------------------------------
 ; In yourforth a stack is just a block of memory set aside for the purpose.
 ; We need a few words to control the stacks.
@@ -756,6 +763,7 @@ macro untilto  label
     header  RSP_store,   RSP_store+5*cw, 0, 0, lastlink, "RSP!"
         pop     ebp
         next
+
 ; ---------------------------- operators with results ------------
 ; Apart from the reordering or duplicating operators, there is a whole slew of
 ; operators that have no side effects, i.e. the only result is on the
@@ -803,6 +811,7 @@ macro untilto  label
         not     eax
         push    eax
         next
+
     header  ALIGNED ,   ALIGNED +5*cw, 0, 0, lastlink, "ALIGNED"
         pop     eax
         dec     eax
@@ -822,7 +831,7 @@ macro untilto  label
         dd      LIT, 2
         dd      LSHIFT
         dd      EXIT
-
+
 ; The archetype of an arithmetic operator, pop 2 registers, add them
 ; and push the result.
     header  _plus_,   _plus_+5*cw, 0, 0, lastlink, "+"
@@ -866,6 +875,7 @@ macro untilto  label
          neg     eax      ; 1 -> -1 : a proper flag
          push    eax
          next
+
     header  _unequal_,   _unequal_+5*cw, 0, 0, lastlink, "<>"
          pop     edx
          pop     ebx
@@ -905,6 +915,7 @@ macro untilto  label
         shr     eax,cl
         push    eax
         next
+
 ; ------------------------------------------------------------------------------
 ; Not all basic instruction must be in assembler. The following operators
 ; are defined as Forth code, They are simple so you can get used
@@ -952,6 +963,7 @@ macro untilto  label
         push    edx
         push    eax
         next
+
 ; ------------------------------------------------------------------------------
 ; Regular cell*cell to cell multiplication.
 ; It is assumed that the result fits in a cell!
@@ -985,6 +997,7 @@ macro untilto  label
         dd      star_slash_MOD
         dd      NIP
         dd      EXIT
+
 ; --------------------- memory store and fetch ---------------------------------
 
     header  _fetch_,   _fetch_+5*cw, 0, 0, lastlink, "@"
@@ -1027,6 +1040,7 @@ macro untilto  label
         pop     eax
         add     [ebx],eax
         next
+
 ; ------------------------- string operations --------------------------------
 ; In yourforth itself we have elevated strings slightly to a low abstraction
 ; level, just enough to forget about the individual characters.
@@ -1066,11 +1080,11 @@ macro untilto  label
         dd R_fetch, string_store, R_from
         dd _ALIGN_
         dd EXIT
+
 ; ----------------- low level block operations ------------------------------------------
 ; Operations on blocks of memory. It is of some importance that they are fast.
 ; We need to move a block of memory, initialise it and compare two blocks.
 ; They are in fact wrappers around "rep movsb" "rep stosb" and "rep cmpsb".
-
     header  _MOVE_,   _MOVE_+5*cw, 0, 0, lastlink, "MOVE"
         mov     ebx,esi
         pop     ecx
@@ -1114,6 +1128,7 @@ CORA3:
         mov     esi,edx
         push    eax
         next
+
 ; ------------------------------------------------------------------------------
 ; In Forth functions or words are first class citizens. That just means that
 ; they can be passed around as is. The token used for this is of course dea.
@@ -1142,9 +1157,10 @@ SINDEX1:
         dec     edi
         push    edi
         next
+
 ; This splits a string at a character, another fundamental
 ; operation in parsing and used at critical points in yourforth.
-;
+
     header  string_slash,   string_slash+5*cw, 0, 0, lastlink, "$/"
         pop     eax
         pop     ecx
@@ -1180,7 +1196,7 @@ SSLAS2:
         int     0x80
         push    eax
         next
-
+
 ; ---------------------- high level --------------------------------------------
 ; You are now familiar with the low level interpreter. The interaction with the
 ; user and the console or terminal is next. It is similar to a shell, in fact Forth
@@ -1215,7 +1231,7 @@ then2:
         dd      _one_, PP, plus_store
 else2:
         dd      EXIT
-
+
 ; The parsing can be nested, The following two words save and restore the
 ; total parse state.
     header  SAVE,   docol, SAVE+5*cw, 0, lastlink, "SAVE"
@@ -1256,7 +1272,7 @@ begin2: dd      DROP
         untilto   begin2
         dd      OVER, _minus_
         dd      EXIT
-
+
 ; Irrespective of whether the parse area is a line typed in at the console,
 ; a file buffer or a string, the interpreting is based on a NAME.
 ; After separating off a blank delimited string it is passed to FOUND that
@@ -1286,7 +1302,7 @@ begin2: dd      DROP
 ;            ^
 ;            |
 ;           PP
-
+
 ; The word INTERPRET knows nothing. It just EXECUTE 's or compiles, using comma.
 ; Comma expands the dictionary space with data. We'll come back to that.
 ; STATE regulates this, it is a global control flag.
@@ -1319,9 +1335,9 @@ begin3:
 else1:   dd      _comma_
 endif1: dd      query_STACK
         goto  begin3
-
 inte8:  dd      DROP, DROP
         dd      EXIT
+
 ; EVALUATE is a straightforward combination of setting the parse area, and
 ; interpreting it. There is one catch. There may be an error during interpretaton,
 ; and this could mix up the different sources. In yourforth there are no
@@ -1335,6 +1351,7 @@ inte8:  dd      DROP, DROP
         dd      _RESTORE_
         dd      THROW
         dd      EXIT
+
 ; And then there is the interpret loop: accept user input, interpret line, repeat.
 ; It is called QUIT in Forth, a strange name until you realize that you can
 ; put QUIT anywhere in a program and restart basic user interaction.
@@ -1368,7 +1385,7 @@ ENDIF7:
         dd      OK
         goto  QUIT1
         dd      EXIT
-
+
 ; OK is the first word we encounter that has a string literal inside.
 ; BRANCH makes us jump over the string. This usage is the reason that
 ; there is an alignment inside BRANCH. In this way, we continue at the LIT
@@ -1388,7 +1405,7 @@ sb2:
         dd      CR
 OK2:
         dd      EXIT
-
+
 ; ---------------------- high level --------------------------------------------
     header  DIGIT,   docol , DIGIT+5*cw, 0, lastlink, "DIGIT"
         dd      LIT, '0'
@@ -1428,6 +1445,7 @@ PARSE8:
         dd      _BL_
         dd      EMIT
         dd      EXIT
+
 ; ---------------- ??defining?? ------------------------------------------------
     header  TOGGLE,   docol , TOGGLE+5*cw, 0, lastlink, "TOGGLE"
         dd      OVER, _fetch_, _XOR_, SWAP, _store_
@@ -1462,6 +1480,7 @@ docon:  mov     eax,[eax+1*cw]     ; dea -> data
 dobuf:  mov     eax,[eax+1*cw]    ; dea -> data
         push    eax
         next
+
 ; ------------------------------------------------------------------------------
     header  _zero_,   docon, 0, 0, lastlink, "0"
     header  _one_,   docon, 1, 0, lastlink, "1"
@@ -1472,6 +1491,7 @@ dobuf:  mov     eax,[eax+1*cw]    ; dea -> data
     header  DSP_zero,   docon, initdsp0 , 0, lastlink, "DSP0"
     header  RSP_zero,   docon, initrsp0  , 0, lastlink, "RSP0"
     header  CIB,   docon, initcib , 0, lastlink, "CIB"
+
 ; ------------------------------------------------------------------------------
     header  _DP_,   dobuf, _DP_+5*cw, 0, lastlink, "DP"
         dd      initdp
@@ -1501,6 +1521,7 @@ dobuf:  mov     eax,[eax+1*cw]    ; dea -> data
         dd      ALLOT
         dd      C_store
         dd      EXIT
+
 ; ------------------------------------------------------------------------------
     header  STATE,   dobuf, STATE+5*cw, 0, lastlink, "STATE"
         dd      _
@@ -1520,7 +1541,7 @@ LITE1:  dd      EXIT
         dd      STATE
         dd      _store_
         dd      EXIT
-
+
 ; ------------------------------------------------------------------------------
     header  BASE,   dobuf, BASE+5*cw, 0, lastlink, "BASE"
         dd      _
@@ -1532,6 +1553,7 @@ LITE1:  dd      EXIT
         rb      2*cw
     header  CONTEXT,   dobuf, CONTEXT+5*cw, 0, lastlink, "CONTEXT"
         dd      _
+
 ; ------------------------------------------------------------------------------
     header  LATEST,   docol, LATEST+5*cw, 0, lastlink, "LATEST"
         dd      CONTEXT
@@ -1563,6 +1585,7 @@ LITE1:  dd      EXIT
         dd      LIT,5*cw
         dd      _plus_
         dd      EXIT
+
 ; See also >BODY in the CREATE .. DOES> section.
 ; ------------------------------------------------------------------------------
     header  HIDDEN,   docol, HIDDEN+5*cw, 0, lastlink, "HIDDEN"
@@ -1587,6 +1610,7 @@ LITE1:  dd      EXIT
         dd      SWAP
         dd      C_fetch
         dd      EXIT
+
 ; ------------------------------------------------------------------------------
     header  HOLD,   docol, HOLD+5*cw, 0, lastlink, "HOLD"
         dd      LIT,-1
@@ -1617,6 +1641,7 @@ NPNUM1:  dd      PP_fetch_fetch
 NPNUM5:
         dd      two_DROP
         dd      EXIT
+
 ; ------------------------------------------------------------------------------
     header  FOUND,   docol, FOUND+5*cw, 0, lastlink, "FOUND"
         dd      CONTEXT, _fetch_
@@ -1648,13 +1673,12 @@ found0:
                       ifto  endif4
                           dd      NIP,NIP,EXIT   ; leave dea, a denotation.
         endif4:
-
         dd      to_LFA, _fetch_
         dd      _DUP_, zero_equal
         untilto  found0
 
         dd      NIP, NIP, EXIT          ; DEA is zero: "not found".
-
+
     header  PRESENT,   docol, PRESENT+5*cw, 0, lastlink, "PRESENT"
         dd      _DUP_, to_R
         dd      FOUND
@@ -1667,6 +1691,7 @@ found0:
 PRES1:
         dd      R_from, DROP
         dd      EXIT
+
 ; ------------- error handling -------------------------------------------------
     header  WHERE,   dobuf, WHERE+5*cw, 0, lastlink, "WHERE"
         dd      _, _
@@ -1697,6 +1722,7 @@ sb0:
         dd      _dot_
         dd      BASE, _store_
         dd      EXIT
+
     header  CATCH,   docol, CATCH+5*cw, 0, lastlink, "CATCH"
         dd      DSP_fetch, CELL_plus, to_R
         dd      HANDLER, _fetch_, to_R
@@ -1723,6 +1749,7 @@ THROW2:
 THROW1:
         dd      DROP
         dd      EXIT
+
     header  query_ERROR,   docol, query_ERROR+5*cw, 0, lastlink, "?ERROR"
         dd      SWAP
         ifto  QERR1
@@ -1742,6 +1769,7 @@ QERR2:  dd      EXIT
         dd      _less_, LIT, 7, query_ERROR
         dd      EXIT
         ;
+
 ; ------------------------------------------------------------------------------
     header  HEADER,   docol, HEADER+5*cw, 0, lastlink, "HEADER"
         dd      _DUP_, zero_equal, LIT, 5, query_ERROR
@@ -1770,6 +1798,7 @@ CREA1:  dd      DROP
         dd      _comma_
         dd      R_from
         dd      EXIT
+
 ; ------------------------------------------------------------------------------
     header  _LINK_,   docol, _LINK_+5*cw, 0, lastlink, "LINK"
         dd      to_LFA
@@ -1783,6 +1812,7 @@ CREA1:  dd      DROP
         dd      CONTEXT, _fetch_
         dd      _LINK_
         dd      EXIT
+
 ; ------------------------------------------------------------------------------
     header  IMMEDIATE,   docol, IMMEDIATE+5*cw, 0, lastlink, "IMMEDIATE"
         dd      LATEST
@@ -1820,7 +1850,7 @@ CREA1:  dd      DROP
         dd      FORTH
         dd      left_bracket, HERE,  string_fetch, EVALUATE
         dd      EXIT
-; ------------------------------------------------------------------------------
+
 ; ---------------- file interface ----------------------------------------------
     header  ZEN,   docol, ZEN+5*cw, 0, lastlink, "ZEN"
         dd      LIT, pad0, string_store
@@ -1856,6 +1886,7 @@ CREA1:  dd      DROP
         dd      LIT, __NR_write, XOS
         dd      _zero_, MIN
         dd      EXIT
+
 ; ---------------------------------------------------------------
     header  REFILL_CIB,   docol, REFILL_CIB+5*cw, 0, lastlink, "REFILL-CIB"
         dd      REMAINDER, _fetch_, to_R
@@ -1893,6 +1924,7 @@ PACCEP1:
         dd      LIT, 0x0A, string_slash
         dd      two_SWAP, REMAINDER, two_store
         dd      EXIT
+
 ; ---------------------------------------------------------------
     header  KEY,   docol, KEY+5*cw, 0, lastlink, "KEY"
         dd      _zero_, DSP_fetch, _one_, ACCEPT, DROP
@@ -1904,7 +1936,7 @@ PACCEP1:
         dd      DSP_fetch, _one_, _TYPE_
         dd      DROP
         dd      EXIT
-        ;
+
 ; ---------------------------------------------------------------
     header  to_percent,   docol, to_percent+5*cw, 0, lastlink, "<%"
         dd      PAD
@@ -1935,6 +1967,7 @@ perc1:   dd      LIT,0x30
         dd      _plus_
         dd      HOLD
         dd      EXIT
+
     header  percent_S,   docol, percent_S+5*cw, 0, lastlink, "%S"
 perc_S1:  dd      percent
         dd      _DUP_
@@ -1960,7 +1993,7 @@ SIGN1:  dd      EXIT
         dd      percent_from
         dd      _TYPE_
         dd      EXIT
-
+
 ; ---------------------------------------------------------------
 ; Presenting Forth's poor man's objects of the seventies, the CREATE DOES>
 ; construct. Those objects have one method only and that method is coded
@@ -1991,7 +2024,7 @@ SIGN1:  dd      EXIT
         dd      to_DFA, _fetch_
         dd      CELL_plus
         dd      EXIT
-
+
     header  CREATE,   docol, CREATE+5*cw, 0, lastlink, "CREATE"
         dd      NAME
         dd      paren_CREATE
@@ -2017,7 +2050,7 @@ crnoop: dd      EXIT
         dd      _fetch_         ; Get the Post Header Address.
         dd      _store_
         dd      EXIT
-
+
 ; Presenting Forth's ugly secret: the code routines to do "convenient" looping,
 ; not all that convenient actually, but life without it would be unbearable.
 ; I lied about BRANCH and 0BRANCH being the only words in the Forth
@@ -2059,7 +2092,7 @@ XLOO1:  add     [ebp],ebx
         mov     eax,[ebp+3*cw]
         push    eax
         next
-
+
 ; The next word in the linked list is FORTH, but it is not
 ;   the next word of the assembler source.
 ; In fact Forth is the first word in the linked list defined
@@ -2083,7 +2116,7 @@ regularlast EQU lastlink         ; Remember where non-prefix word end.
 ; of LITERAL, that ends all prefix words as you can see. Then there are two lines
 ; that generates errors, if there is no character following "&" or no blank following
 ; the character.
-
+
 ; catchall is a prefix, and its Forth name is an empty string, and as such it matches
 ; anything. So the word is interpreted as a number, and then either interpreted or
 ; compiled, according to state.
@@ -2112,7 +2145,7 @@ regularlast EQU lastlink         ; Remember where non-prefix word end.
         dd      R_fetch, CELL_plus, LITERAL, R_from, _fetch_, LITERAL
         dd      PP_fetch_fetch, NIP, query_BLANK, _NOT_, LIT, 10, query_ERROR
         dd      EXIT
-
+
 ; We talked about CREATE and DOES> before, and it is time to introduce
 ; the only object that we have in this source.
 ; FORTH is a vocabulary, i.e. a word that changes the
@@ -2136,7 +2169,7 @@ dovoc:
 
 ; Note that outside of this assembler source we would need the above
 ; word NAMESPACE using CREATE DOES> to define it.
-
+
 ; ------------------------------------------------------------------------------
 initdp:
 
@@ -2181,7 +2214,7 @@ startforthcode:
     db ": DO '(DO) , (FORWARD (BACK ;               IMMEDIATE         ", LF
     db ": LOOP '(LOOP) , BACK) FORWARD) ;           IMMEDIATE         ", LF
     db ": +LOOP '(+LOOP) , BACK) FORWARD) ;         IMMEDIATE         ", LF
-
+
 ; What if we want to compile a word like ' that likes to run even during
 ; compilation? An example of that you will find below in FORGET.
 ; The solution is a parsing word that gets the name from the input stream.
@@ -2222,4 +2255,3 @@ initcib: rb  cibsize
         rb  stacksize
 initrsp0:
 em:
-        ;
