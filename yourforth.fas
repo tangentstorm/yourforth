@@ -2342,6 +2342,11 @@ startforthcode:
     db "   DROP DROP &] EMIT ;                                        ", LF
     db ": FORGET   POSTPONE ' DUP >NFA @ DP !                         ", LF
     db "   >LFA @ 'FORTH >BODY >LFA ! ;                               ", LF
+
+; '\' to end of line is already a comment. this adds ( inline comments )
+    db ": ( 41 PARSE 2DROP ;  IMMEDIATE                               ", LF
+
+; marker word for start of user code
     db ": TASK ;                                                      ", LF
 endforthcode:
 dictsize       =     endforthcode - bm
